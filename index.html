@@ -1,24 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PPPS19 Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
+
+        /* Fullscreen Container */
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Mobile Launch Overlay */
+        #launch-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 30px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 360px;
+            border: 1px solid #334155;
+        }
+
+        .title {
+            color: #f8fafc;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-bottom: 24px;
+        }
+
+        .launch-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .launch-btn:active {
+            background-color: #1d4ed8;
+            transform: scale(0.98);
+        }
+
+        /* Hidden WebApp Iframe */
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
-    <iframe 
-        src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
-        width="100%"
-        height="100%"
-        allowfullscreen="true"
-        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none;">
-    </iframe>
+    <div id="app-container">
+        <!-- Manual Interaction Screen for Mobile -->
+        <div id="launch-overlay">
+            <div class="card">
+                <div class="title">PPPS19 Portal</div>
+                <div class="subtitle">Tap below to open full screen and sign in to your account.</div>
+                <button class="launch-btn" onclick="launchApp()">Enter Management System</button>
+            </div>
+        </div>
+
+        <!-- Google Apps Script Iframe -->
+        <iframe 
+            id="app-frame"
+            src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
+            allowfullscreen="true">
+        </iframe>
+    </div>
 
 <script>
-    window.onload = function() {
-        document.querySelector('iframe').requestFullscreen().catch((err) => {
-            console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-        });
-    };
-</script>    
+    function launchApp() {
+        const container = document.documentElement;
+        const iframe = document.getElementById('app-frame');
+        const overlay = document.getElementById('launch-overlay');
+
+        // Request Fullscreen on user tap
+        if (container.requestFullscreen) {
+            container.requestFullscreen().catch(err => console.log(err));
+        } else if (container.webkitRequestFullscreen) { /* Safari / iOS Mobile support */
+            container.webkitRequestFullscreen();
+        } else if (container.msRequestFullscreen) {
+            container.msRequestFullscreen();
+        }
+
+        // Show iframe and remove button overlay
+        overlay.style.display = 'none';
+        iframe.style.display = 'block';
+    }
+</script>
+
 </body>
 </html>
