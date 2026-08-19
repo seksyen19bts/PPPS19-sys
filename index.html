@@ -1,23 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PPPS19 Management System</title>
 </head>
-<body>
+<body style="margin: 0; padding: 0; overflow: hidden;">
 
     <iframe 
         src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
-        width="100%"
-        height="100%"
         allowfullscreen="true"
         style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none;">
     </iframe>
+
 <script>
     window.onload = function() {
-    document.queryselector(`iframe`).requestfullscreen().catch((err) => {
-    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-    });
-        );
-</script>    
+        // Automatically request full screen requires user interaction in most modern browsers
+        document.querySelector('iframe').requestFullscreen().catch((err) => {
+            console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+    };
+</script>   
 </body>
 </html>
