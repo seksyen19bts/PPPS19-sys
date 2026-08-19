@@ -13,12 +13,43 @@
         }
         html, body {
             width: 100vw;
-            height: 100dvh; /* Dynamic viewport height prevents bottom clipping on mobile */
+            height: 100dvh;
             overflow: hidden;
             background-color: #0f172a;
         }
 
-        /* Overlay Styling */
+        /* Top Bar Container for Mobile Header Control */
+        #top-bar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            z-index: 1000;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+        }
+
+        #menu-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #1e293b;
+            padding: 4px;
+        }
+
+        .bar-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #1e293b;
+        }
+
+        /* Launch Overlay */
         #launch-overlay {
             position: fixed;
             top: 0;
@@ -59,7 +90,7 @@
             cursor: pointer;
         }
 
-        /* Responsive Fullscreen Frame */
+        /* Iframe Styles */
         iframe {
             position: fixed;
             top: 0;
@@ -68,11 +99,33 @@
             height: 100dvh;
             border: none;
             display: none;
+            transition: top 0.2s ease, height 0.2s ease;
+        }
+
+        /* Mobile Viewport Fixes */
+        @media screen and (max-width: 768px) {
+            #top-bar {
+                display: flex;
+            }
+
+            /* Shift iframe down on mobile so it sits neatly below top header */
+            iframe.active-app {
+                top: 50px;
+                height: calc(100dvh - 50px);
+            }
         }
     </style>
 </head>
 <body>
 
+    <!-- Top Navigation Header -->
+    <div id="top-bar">
+        <button id="menu-toggle" onclick="toggleMobileMenu()">☰</button>
+        <div class="bar-title">PPPS19 Portal</div>
+        <div style="width: 24px;"></div> <!-- Spacer balance -->
+    </div>
+
+    <!-- Start Screen Overlay -->
     <div id="launch-overlay">
         <div class="card">
             <div class="title">PPPS19 Portal</div>
@@ -81,6 +134,7 @@
         </div>
     </div>
 
+    <!-- Application Iframe -->
     <iframe 
         id="app-frame"
         src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
@@ -93,6 +147,7 @@
         const iframe = document.getElementById('app-frame');
         const overlay = document.getElementById('launch-overlay');
 
+        // Request Browser Fullscreen
         if (container.requestFullscreen) {
             container.requestFullscreen().catch(err => console.log(err));
         } else if (container.webkitRequestFullscreen) {
@@ -103,6 +158,18 @@
 
         overlay.style.display = 'none';
         iframe.style.display = 'block';
+        iframe.classList.add('active-app');
+    }
+
+    // Toggle menu event inside iframe if cross-origin allows, or trigger resize recalculation
+    function toggleMobileMenu() {
+        const iframe = document.getElementById('app-frame');
+        try {
+            // Sends a message to Google Apps Script inner document to open its sidebar drawer
+            iframe.contentWindow.postMessage('toggleSidebar', '*');
+        } catch(e) {
+            console.log("Cross-origin restriction applied:", e);
+        }
     }
 </script>
 </body>
