@@ -12,36 +12,25 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         html, body {
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100dvh; /* Dynamic viewport height prevents bottom clipping on mobile */
             overflow: hidden;
             background-color: #0f172a;
         }
 
-        /* Fullscreen Container */
-        #app-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Mobile Launch Overlay */
+        /* Overlay Styling */
         #launch-overlay {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.95);
+            width: 100vw;
+            height: 100dvh;
+            background: rgba(15, 23, 42, 0.98);
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 20px;
-            z-index: 10;
-            text-align: center;
+            z-index: 9999;
         }
 
         .card {
@@ -52,20 +41,11 @@
             width: 100%;
             max-width: 360px;
             border: 1px solid #334155;
+            text-align: center;
         }
 
-        .title {
-            color: #f8fafc;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .subtitle {
-            color: #94a3b8;
-            font-size: 0.875rem;
-            margin-bottom: 24px;
-        }
+        .title { color: #f8fafc; font-size: 1.25rem; font-weight: 600; margin-bottom: 8px; }
+        .subtitle { color: #94a3b8; font-size: 0.875rem; margin-bottom: 24px; }
 
         .launch-btn {
             width: 100%;
@@ -77,19 +57,15 @@
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s ease;
-            -webkit-tap-highlight-color: transparent;
         }
 
-        .launch-btn:active {
-            background-color: #1d4ed8;
-            transform: scale(0.98);
-        }
-
-        /* Hidden WebApp Iframe */
+        /* Responsive Fullscreen Frame */
         iframe {
-            width: 100%;
-            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100dvh;
             border: none;
             display: none;
         }
@@ -97,23 +73,19 @@
 </head>
 <body>
 
-    <div id="app-container">
-        <!-- Manual Interaction Screen for Mobile -->
-        <div id="launch-overlay">
-            <div class="card">
-                <div class="title">PPPS19 Portal</div>
-                <div class="subtitle">Tap below to open full screen and sign in to your account.</div>
-                <button class="launch-btn" onclick="launchApp()">Enter Management System</button>
-            </div>
+    <div id="launch-overlay">
+        <div class="card">
+            <div class="title">PPPS19 Portal</div>
+            <div class="subtitle">Tap below to launch in full screen mode.</div>
+            <button class="launch-btn" onclick="launchApp()">Enter Management System</button>
         </div>
-
-        <!-- Google Apps Script Iframe -->
-        <iframe 
-            id="app-frame"
-            src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
-            allowfullscreen="true">
-        </iframe>
     </div>
+
+    <iframe 
+        id="app-frame"
+        src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
+        allowfullscreen="true">
+    </iframe>
 
 <script>
     function launchApp() {
@@ -121,20 +93,17 @@
         const iframe = document.getElementById('app-frame');
         const overlay = document.getElementById('launch-overlay');
 
-        // Request Fullscreen on user tap
         if (container.requestFullscreen) {
             container.requestFullscreen().catch(err => console.log(err));
-        } else if (container.webkitRequestFullscreen) { /* Safari / iOS Mobile support */
+        } else if (container.webkitRequestFullscreen) {
             container.webkitRequestFullscreen();
         } else if (container.msRequestFullscreen) {
             container.msRequestFullscreen();
         }
 
-        // Show iframe and remove button overlay
         overlay.style.display = 'none';
         iframe.style.display = 'block';
     }
 </script>
-
 </body>
 </html>
