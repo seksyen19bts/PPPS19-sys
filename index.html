@@ -34,25 +34,6 @@
             padding: 0 16px;
         }
 
-        #menu-toggle {
-            background: #334155;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: #f8fafc;
-            padding: 6px 12px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-        }
-
-        #menu-toggle:active {
-            background-color: #475569;
-            transform: scale(0.95);
-        }
-
         .bar-title {
             font-weight: 600;
             font-size: 1rem;
@@ -132,7 +113,6 @@
 
     <!-- Top Navigation Header -->
     <div id="top-bar">
-        <button id="menu-toggle" onclick="toggleIframeDrawer()" title="Toggle Mobile Menu">☰ Menu</button>
         <div class="bar-title">PPPS19 Portal</div>
         <button class="logout-btn" onclick="handleLogout()">Logout</button>
     </div>
