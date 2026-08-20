@@ -1,218 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PPPS19 Management System</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-        html, body {
-            width: 100vw;
-            height: 100dvh;
-            overflow: hidden;
-            background-color: #0f172a;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PPPS19 Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        html, body {
+            width: 100vw;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
 
-        /* Top Bar Container for Mobile Header Control */
-        #top-bar {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 50px;
-            background-color: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            z-index: 1000;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 12px;
-        }
+        /* Fixed Navigation Header */
+        #top-bar {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background-color: #1e293b;
+            border-bottom: 1px solid #334155;
+            z-index: 1000;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+        }
 
-        #menu-toggle {
-            background: none;
-            border: none;
-            font-size: 1.4rem;
-            cursor: pointer;
-            color: #1e293b;
-            padding: 6px 10px;
-            border-radius: 6px;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-        }
+        #menu-toggle {
+            background: #334155;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
 
-        #menu-toggle:active, #menu-toggle.active {
-            background-color: #e2e8f0;
-            transform: scale(0.95);
-        }
+        #menu-toggle:active {
+            background-color: #475569;
+            transform: scale(0.95);
+        }
 
-        .bar-title {
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: #1e293b;
-        }
+        .bar-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #f8fafc;
+        }
 
-        /* Explicit Logout Button */
-        .logout-btn {
-            background-color: #ef4444;
-            color: #ffffff;
-            border: none;
-            padding: 6px 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
+        .logout-btn {
+            background-color: #ef4444;
+            color: #ffffff;
+            border: none;
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
 
-        .logout-btn:active {
-            background-color: #dc2626;
-        }
+        .logout-btn:active {
+            background-color: #dc2626;
+        }
 
-        /* Launch Overlay */
-        #launch-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100dvh;
-            background: rgba(15, 23, 42, 0.98);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 9999;
-        }
+        /* Launch Overlay */
+        #launch-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100dvh;
+            background: rgba(15, 23, 42, 0.98);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 9999;
+        }
 
-        .card {
-            background: #1e293b;
-            padding: 30px 24px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 360px;
-            border: 1px solid #334155;
-            text-align: center;
-        }
+        .card {
+            background: #1e293b;
+            padding: 30px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 360px;
+            border: 1px solid #334155;
+            text-align: center;
+        }
 
-        .title { color: #f8fafc; font-size: 1.25rem; font-weight: 600; margin-bottom: 8px; }
-        .subtitle { color: #94a3b8; font-size: 0.875rem; margin-bottom: 24px; }
+        .title { color: #f8fafc; font-size: 1.25rem; font-weight: 600; margin-bottom: 8px; }
+        .subtitle { color: #94a3b8; font-size: 0.875rem; margin-bottom: 24px; }
 
-        .launch-btn {
-            width: 100%;
-            padding: 14px;
-            background-color: #2563eb;
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
+        .launch-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
 
-        /* Iframe Styles */
-        iframe {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100dvh;
-            border: none;
-            display: none;
-            transition: top 0.2s ease, height 0.2s ease;
-        }
-
-        /* Mobile Viewport Header Adjustment */
-        @media screen and (max-width: 768px) {
-            #top-bar {
-                display: flex;
-            }
-
-            iframe.active-app {
-                top: 50px;
-                height: calc(100dvh - 50px);
-            }
-        }
-    </style>
+        /* Main Application Iframe Container */
+        #app-frame {
+            position: fixed;
+            top: 50px;
+            left: 0;
+            width: 100vw;
+            height: calc(100dvh - 50px);
+            border: none;
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
-    <!-- Top Navigation Header -->
-    <div id="top-bar">
-        <button id="menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle Navigation Menu">☰</button>
-        <div class="bar-title">PPPS19 Portal</div>
-        <button class="logout-btn" onclick="handleLogout()">Logout</button>
-    </div>
+    <!-- Top Navigation Header -->
+    <div id="top-bar">
+        <button id="menu-toggle" onclick="reloadFrame()" title="Refresh Application">☰ Menu</button>
+        <div class="bar-title">PPPS19 Portal</div>
+        <button class="logout-btn" onclick="handleLogout()">Logout</button>
+    </div>
 
-    <!-- Start Screen Overlay -->
-    <div id="launch-overlay">
-        <div class="card">
-            <div class="title">PPPS19 Portal</div>
-            <div class="subtitle">Tap below to launch in full screen mode.</div>
-            <button class="launch-btn" onclick="launchApp()">Enter Management System</button>
-        </div>
-    </div>
+    <!-- Start Screen Overlay -->
+    <div id="launch-overlay">
+        <div class="card">
+            <div class="title">PPPS19 Portal</div>
+            <div class="subtitle">Tap below to launch the system.</div>
+            <button class="launch-btn" onclick="launchApp()">Enter Management System</button>
+        </div>
+    </div>
 
-    <!-- Application Iframe -->
-    <iframe 
-        id="app-frame"
-        src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
-        allow="fullscreen">
-    </iframe>
+    <!-- Application Iframe -->
+    <iframe 
+        id="app-frame"
+        src="https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec"
+        allow="fullscreen">
+    </iframe>
 
 <script>
-    function launchApp() {
-        const container = document.documentElement;
-        const iframe = document.getElementById('app-frame');
-        const overlay = document.getElementById('launch-overlay');
+    const APP_URL = "https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec";
 
-        // Request Browser Fullscreen
-        if (container.requestFullscreen) {
-            container.requestFullscreen().catch(err => console.log(err));
-        } else if (container.webkitRequestFullscreen) {
-            container.webkitRequestFullscreen();
-        } else if (container.msRequestFullscreen) {
-            container.msRequestFullscreen();
-        }
+    function launchApp() {
+        const container = document.documentElement;
+        const iframe = document.getElementById('app-frame');
+        const overlay = document.getElementById('launch-overlay');
 
-        overlay.style.display = 'none';
-        iframe.style.display = 'block';
-        iframe.classList.add('active-app');
-    }
+        if (container.requestFullscreen) {
+            container.requestFullscreen().catch(err => console.log(err));
+        } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen();
+        }
 
-    function toggleMobileMenu() {
-        const btn = document.getElementById('menu-toggle');
-        const iframe = document.getElementById('app-frame');
+        overlay.style.display = 'none';
+        iframe.style.display = 'block';
+    }
 
-        // 1. Visual active button state feedback
-        btn.classList.add('active');
-        setTimeout(() => btn.classList.remove('active'), 200);
+    function reloadFrame() {
+        const iframe = document.getElementById('app-frame');
+        if (iframe) {
+            // Re-assigning URL forces the frame to reset/reload cleanly
+            iframe.src = APP_URL;
+        }
+    }
 
-        // 2. Dispatch cross-origin postMessage events
-        if (iframe && iframe.contentWindow) {
-            iframe.contentWindow.postMessage('toggleSidebar', '*');
-            iframe.contentWindow.postMessage({ action: 'toggleSidebar' }, '*');
-            iframe.focus();
-        }
-    }
-
-    function handleLogout() {
-        // Exit Fullscreen if active
-        if (document.fullscreenElement || document.webkitFullscreenElement) {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(err => console.log(err));
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
-        }
-
-        // Reload page to reset login/session overlay state
-        window.location.reload();
-    }
+    function handleLogout() {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(err => console.log(err));
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+        window.location.reload();
+    }
 </script>
 </body>
 </html>
