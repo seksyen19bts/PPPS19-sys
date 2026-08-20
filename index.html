@@ -132,7 +132,7 @@
 
     <!-- Top Navigation Header -->
     <div id="top-bar">
-        <button id="menu-toggle" onclick="reloadFrame()" title="Refresh Application">☰ Menu</button>
+        <button id="menu-toggle" onclick="toggleIframeDrawer()" title="Toggle Mobile Menu">☰ Menu</button>
         <div class="bar-title">PPPS19 Portal</div>
         <button class="logout-btn" onclick="handleLogout()">Logout</button>
     </div>
@@ -156,6 +156,14 @@
 <script>
     const APP_URL = "https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec";
 
+    function toggleIframeDrawer() {
+    const iframe = document.getElementById('app-frame');
+    if (iframe && iframe.contentWindow) {
+      // Send toggle message down into the child iframe
+      iframe.contentWindow.postMessage({ action: 'toggleDrawer' }, '*');
+    }
+  }
+    
     function launchApp() {
         const container = document.documentElement;
         const iframe = document.getElementById('app-frame');
