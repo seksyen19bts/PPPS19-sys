@@ -132,7 +132,7 @@
 
     <!-- Top Navigation Header -->
     <div id="top-bar">
-        <button id="menu-toggle" onclick="toggleIframeDrawer()" title="Toggle Mobile Menu">☰ Menu</button>
+        <button id="menu-toggle" onclick="toggleMobileDrawer()" title="Toggle Mobile Menu">☰ Menu</button>
         <div class="bar-title">PPPS19 Portal</div>
         <button class="logout-btn" onclick="handleLogout()">Logout</button>
     </div>
@@ -156,6 +156,15 @@
 <script>
     const APP_URL = "https://script.google.com/macros/s/AKfycbz01R8xI7lDuqoRNQpttX2eB2hKAiDcoXZCcso-xUJCmgx2y6wB3sMTq2CkfLu9tHQ/exec";
 
+    let TOKEN =
+ localStorage.getItem(
+  'ppps19_token'
+ ) || '';
+
+let STATE = null;
+
+let CURRENT_PAGE = 'dashboard';
+    
     function toggleIframeDrawer() {
     const iframe = document.getElementById('app-frame');
     if (iframe && iframe.contentWindow) {
@@ -197,6 +206,3949 @@
         }
         window.location.reload();
     }
+
+    /* =========================================================
+   MOBILE DRAWER & CROSS-FRAME LISTENERS (FIX IMPLEMENTED)
+   ========================================================= */
+
+function toggleMobileDrawer(){
+
+ const drawer =
+  document.getElementById('mobileDrawer');
+
+ const backdrop =
+  document.getElementById('mobileDrawerBackdrop');
+
+ const button =
+  document.getElementById('mobileMenuButton');
+
+ if(!drawer || !backdrop || !button)return;
+
+ const isOpen =
+  drawer.classList.toggle('mobile-drawer-open');
+
+ backdrop.classList.toggle(
+  'mobile-drawer-visible',
+  isOpen
+ );
+
+ button.setAttribute(
+  'aria-expanded',
+  isOpen ? 'true' : 'false'
+ );
+
+ button.setAttribute(
+  'aria-label',
+  isOpen ? 'Tutup menu' : 'Buka menu'
+ );
+
+ button.textContent =
+  isOpen ? '✕' : '☰';
+
+ document.body.style.overflow =
+  isOpen ? 'hidden' : '';
+}
+
+
+function closeMobileDrawer(){
+
+ const drawer =
+  document.getElementById('mobileDrawer');
+
+ const backdrop =
+  document.getElementById('mobileDrawerBackdrop');
+
+ const button =
+  document.getElementById('mobileMenuButton');
+
+ if(!drawer || !backdrop || !button)return;
+
+ drawer.classList.remove(
+  'mobile-drawer-open'
+ );
+
+ backdrop.classList.remove(
+  'mobile-drawer-visible'
+ );
+
+ button.setAttribute(
+  'aria-expanded',
+  'false'
+ );
+
+ button.setAttribute(
+  'aria-label',
+  'Buka menu'
+ );
+
+ button.textContent = '☰';
+
+ document.body.style.overflow = '';
+}
+
+
+/* Cross-origin message listener from Github pages (index.html) */
+window.addEventListener('message', function(event) {
+ if (event.data && event.data.action === 'toggleDrawer') {
+  toggleMobileDrawer();
+ }
+});
+
+
+document.addEventListener(
+ 'click',
+ function(e){
+
+  if(
+   window.innerWidth <= 768 &&
+   e.target.closest('#nav button')
+  ){
+   closeMobileDrawer();
+  }
+
+ }
+);
+
+
+document.addEventListener(
+ 'keydown',
+ function(e){
+
+  if(
+   e.key === 'Escape' &&
+   window.innerWidth <= 768
+  ){
+   closeMobileDrawer();
+  }
+
+ }
+);
+
+
+window.addEventListener(
+ 'resize',
+ function(){
+
+  if(window.innerWidth > 768){
+   closeMobileDrawer();
+  }
+
+ }
+);
+
+
+/* =====================================================
+ GOOGLE APPS SCRIPT API WRAPPER
+====================================================== */
+
+function call(fn,...args){
+
+ return new Promise(
+  function(resolve,reject){
+
+   if(
+    typeof google === 'undefined' ||
+    !google.script ||
+    !google.script.run
+   ){
+
+    reject(
+     new Error(
+      'Google Apps Script tidak tersedia. Pastikan index.html dijalankan melalui Web App Apps Script.'
+     )
+    );
+
+    return;
+   }
+
+   google.script.run
+    .withSuccessHandler(
+     function(response){
+
+      resolve(response);
+
+     }
+    )
+    .withFailureHandler(
+     function(error){
+
+      reject(
+       error instanceof Error
+        ? error
+        : new Error(
+           error &&
+           error.message
+            ? error.message
+            : String(error)
+          )
+      );
+
+     }
+    )[fn](...args);
+
+  }
+ );
+
+}
+
+
+/* =====================================================
+ UTILITIES
+====================================================== */
+
+function esc(v){
+
+ return String(v ?? '')
+  .replace(
+   /[&<>"']/g,
+   function(m){
+
+    return {
+     '&':'&amp;',
+     '<':'&lt;',
+     '>':'&gt;',
+     '"':'&quot;',
+     "'":'&#039;'
+    }[m];
+
+   }
+  );
+
+}
+
+
+function money(v){
+
+ const n =
+  Number(v || 0);
+
+ return 'RM ' +
+  n.toFixed(2);
+
+}
+
+
+function showError(
+ el,
+ msg
+){
+
+ const target =
+  document.getElementById(el);
+
+ if(!target)return;
+
+ target.innerHTML =
+  '<div class="alert">' +
+  esc(msg) +
+  '</div>';
+
+}
+
+
+function showSuccess(
+ el,
+ msg
+){
+
+ const target =
+  document.getElementById(el);
+
+ if(!target)return;
+
+ target.innerHTML =
+  '<div class="success">' +
+  esc(msg) +
+  '</div>';
+
+}
+
+
+function loading(text){
+
+ return `
+  <div class="loading">
+   <span class="spinner"></span>
+   ${esc(text || 'Memuatkan...')}
+  </div>
+ `;
+
+}
+
+
+/* =====================================================
+ LOGIN
+====================================================== */
+
+async function doLogin(){
+
+ const email =
+  document
+   .getElementById('email')
+   .value
+   .trim();
+
+ const password =
+  document
+   .getElementById('password')
+   .value;
+
+ if(!email || !password){
+
+  showError(
+   'loginError',
+   'Sila masukkan email dan password.'
+  );
+
+  return;
+ }
+
+ const button =
+  document.getElementById(
+   'loginButton'
+  );
+
+ button.disabled = true;
+ button.textContent =
+  'Sedang log masuk...';
+
+ document.getElementById(
+  'loginError'
+ ).innerHTML = '';
+
+ try{
+
+  const r =
+   await call(
+    'login',
+    email,
+    password
+   );
+
+  console.log(
+   'LOGIN RESPONSE:',
+   r
+  );
+
+  if(!r){
+
+   throw new Error(
+    'Server tidak mengembalikan response.'
+   );
+
+  }
+
+  if(r.ok !== true){
+
+   throw new Error(
+    r.message ||
+    'Email atau password tidak sah.'
+   );
+
+  }
+
+  if(
+   typeof r.token !== 'string' ||
+   !r.token
+  ){
+
+   throw new Error(
+    'Server tidak mengembalikan session token.'
+   );
+
+  }
+
+  TOKEN =
+   r.token;
+
+  localStorage.setItem(
+   'ppps19_token',
+   TOKEN
+  );
+
+  await loadPortal();
+
+ }catch(e){
+
+  console.error(
+   'LOGIN ERROR:',
+   e
+  );
+
+  showError(
+   'loginError',
+   e.message ||
+   'Login gagal.'
+  );
+
+ }finally{
+
+  button.disabled = false;
+  button.textContent =
+   'Log Masuk';
+
+ }
+
+}
+
+
+/* =====================================================
+ LOAD PORTAL
+====================================================== */
+
+async function loadPortal(){
+
+ if(!TOKEN){
+
+  showLogin();
+
+  return;
+ }
+
+ document.getElementById(
+  'content'
+ ).innerHTML =
+  loading(
+   'Memuatkan portal...'
+  );
+
+ try{
+
+  const r =
+   await call(
+    'getPortal',
+    TOKEN
+   );
+
+  console.log(
+   'PORTAL RESPONSE:',
+   r
+  );
+
+  if(!r){
+
+   throw new Error(
+    'Server tidak mengembalikan response.'
+   );
+
+  }
+
+  if(r.ok !== true){
+
+   throw new Error(
+    r.message ||
+    'Session tidak sah.'
+   );
+
+  }
+
+  if(!r.user){
+
+   throw new Error(
+    'Server tidak mengembalikan maklumat user.'
+   );
+
+  }
+
+  STATE = r;
+
+  renderShell();
+
+  show(
+   CURRENT_PAGE ||
+   'dashboard'
+  );
+
+ }catch(e){
+
+  console.error(
+   'LOAD PORTAL ERROR:',
+   e
+  );
+
+  TOKEN = '';
+
+  STATE = null;
+
+  localStorage.removeItem(
+   'ppps19_token'
+  );
+
+  showLogin();
+
+  showError(
+   'loginError',
+   e.message ||
+   'Session telah tamat. Sila login semula.'
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ SHOW LOGIN
+====================================================== */
+
+function showLogin(){
+
+ document
+  .getElementById('app')
+  .classList.add(
+   'hidden'
+  );
+
+ document
+  .getElementById('login')
+  .classList.remove(
+   'hidden'
+  );
+
+ STATE = null;
+
+ const password =
+  document.getElementById(
+   'password'
+  );
+
+ if(password){
+  password.value = '';
+ }
+
+ const email =
+  document.getElementById(
+   'email'
+  );
+
+ if(email){
+  email.focus();
+ }
+
+}
+
+
+/* =====================================================
+ LOGOUT
+====================================================== */
+
+async function doLogout(){
+
+ try{
+
+  if(TOKEN){
+
+   await call(
+    'logout',
+    TOKEN
+   );
+
+  }
+
+ }catch(e){
+
+  console.warn(
+   'LOGOUT ERROR:',
+   e
+  );
+
+ }finally{
+
+  TOKEN = '';
+
+  STATE = null;
+
+  localStorage.removeItem(
+   'ppps19_token'
+  );
+
+  showLogin();
+
+ }
+
+}
+
+
+/* =====================================================
+ FORGOT PASSWORD
+====================================================== */
+
+function forgotPassword(){
+
+ openModal(`
+
+  <h3>Lupa Password</h3>
+
+  <p class="muted">
+   Masukkan email yang didaftarkan.
+   Jika akaun wujud, sistem akan menghantar
+   kod reset password.
+  </p>
+
+  <div id="resetRequestMsg"></div>
+
+  <label>Email</label>
+
+  <input
+   id="resetEmail"
+   type="email"
+   placeholder="nama@email.com"
+  >
+
+  <div class="actions">
+
+   <button
+    class="btn secondary"
+    onclick="closeModal()"
+   >
+    Batal
+   </button>
+
+   <button
+    class="btn"
+    onclick="requestResetCode()"
+   >
+    Hantar Kod
+   </button>
+
+  </div>
+
+ `);
+
+}
+
+
+async function requestResetCode(){
+
+ const email =
+  document
+   .getElementById(
+    'resetEmail'
+   )
+   .value
+   .trim();
+
+ if(!email){
+
+  showError(
+   'resetRequestMsg',
+   'Sila masukkan email.'
+  );
+
+  return;
+ }
+
+ try{
+
+  const r =
+   await call(
+    'requestPasswordReset',
+    email
+   );
+
+  if(!r){
+
+   throw new Error(
+    'Server tidak mengembalikan response.'
+   );
+
+  }
+
+  if(r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Permintaan reset gagal.'
+   );
+
+  }
+
+  document.getElementById(
+   'resetRequestMsg'
+  ).innerHTML =
+   '<div class="success">' +
+   esc(
+    r.message ||
+    'Kod reset telah dihantar.'
+   ) +
+   '</div>';
+
+  setTimeout(
+   function(){
+
+    showCompleteReset(
+     email
+    );
+
+   },
+   700
+  );
+
+ }catch(e){
+
+  showError(
+   'resetRequestMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+function showCompleteReset(
+ email
+){
+
+ openModal(`
+
+  <h3>Reset Password</h3>
+
+  <p class="muted">
+   Masukkan kod reset yang diterima
+   dan password baru.
+  </p>
+
+  <div id="completeResetMsg"></div>
+
+  <label>Email</label>
+
+  <input
+   id="completeEmail"
+   value="${esc(email)}"
+   readonly
+  >
+
+  <label>Kod Reset</label>
+
+  <input
+   id="resetCode"
+   maxlength="6"
+   inputmode="numeric"
+   placeholder="123456"
+  >
+
+  <label>Password Baru</label>
+
+  <input
+   id="resetNewPassword"
+   type="password"
+   minlength="8"
+  >
+
+  <label>Sahkan Password Baru</label>
+
+  <input
+   id="resetConfirmPassword"
+   type="password"
+   minlength="8"
+  >
+
+  <div class="actions">
+
+   <button
+    class="btn secondary"
+    onclick="closeModal()"
+   >
+    Batal
+   </button>
+
+   <button
+    class="btn"
+    onclick="completeReset()"
+   >
+    Reset Password
+   </button>
+
+  </div>
+
+ `);
+
+}
+
+
+async function completeReset(){
+
+ const email =
+  document
+   .getElementById(
+    'completeEmail'
+   )
+   .value
+   .trim();
+
+ const code =
+  document
+   .getElementById(
+    'resetCode'
+   )
+   .value
+   .trim();
+
+ const password =
+  document
+   .getElementById(
+    'resetNewPassword'
+   )
+   .value;
+
+ const confirm =
+  document
+   .getElementById(
+    'resetConfirmPassword'
+   )
+   .value;
+
+ if(!email || !code || !password){
+
+  showError(
+   'completeResetMsg',
+   'Semua ruangan wajib diisi.'
+  );
+
+  return;
+ }
+
+ if(password.length < 8){
+
+  showError(
+   'completeResetMsg',
+   'Password mestilah sekurang-kurangnya 8 aksara.'
+  );
+
+  return;
+ }
+
+ if(password !== confirm){
+
+  showError(
+   'completeResetMsg',
+   'Password baru tidak sepadan.'
+  );
+
+  return;
+ }
+
+ try{
+
+  const r =
+   await call(
+    'completePasswordReset',
+    email,
+    code,
+    password
+   );
+
+  if(!r){
+
+   throw new Error(
+    'Server tidak mengembalikan response.'
+   );
+
+  }
+
+  if(r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Reset password gagal.'
+   );
+
+  }
+
+  showSuccess(
+   'completeResetMsg',
+   r.message ||
+   'Password berjaya ditukar.'
+  );
+
+  setTimeout(
+   function(){
+
+    closeModal();
+
+    document
+     .getElementById(
+      'email'
+     ).value =
+      email;
+
+    document
+     .getElementById(
+      'password'
+     ).value =
+      '';
+
+    document
+     .getElementById(
+      'password'
+     ).focus();
+
+   },
+   1000
+  );
+
+ }catch(e){
+
+  showError(
+   'completeResetMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ CHANGE PASSWORD
+====================================================== */
+
+function changePassword(){
+
+ if(!TOKEN){
+
+  showLogin();
+
+  return;
+ }
+
+ openModal(`
+
+  <h3>Tukar Password</h3>
+
+  <div id="changePasswordMsg"></div>
+
+  <label>Password Semasa</label>
+
+  <input
+   id="currentPassword"
+   type="password"
+  >
+
+  <label>Password Baru</label>
+
+  <input
+   id="newPassword"
+   type="password"
+   minlength="8"
+  >
+
+  <label>Sahkan Password Baru</label>
+
+  <input
+   id="confirmNewPassword"
+   type="password"
+   minlength="8"
+  >
+
+  <div class="actions">
+
+   <button
+    class="btn secondary"
+    onclick="closeModal()"
+   >
+    Batal
+   </button>
+
+   <button
+    class="btn"
+    onclick="saveMyPassword()"
+   >
+    Simpan
+   </button>
+
+  </div>
+
+ `);
+
+}
+
+
+async function saveMyPassword(){
+
+ const current =
+  document.getElementById(
+   'currentPassword'
+  ).value;
+
+ const password =
+  document.getElementById(
+   'newPassword'
+  ).value;
+
+ const confirm =
+  document.getElementById(
+   'confirmNewPassword'
+  ).value;
+
+ if(!current || !password){
+
+  showError(
+   'changePasswordMsg',
+   'Sila lengkapkan semua ruangan.'
+  );
+
+  return;
+ }
+
+ if(password.length < 8){
+
+  showError(
+   'changePasswordMsg',
+   'Password mestilah sekurang-kurangnya 8 aksara.'
+  );
+
+  return;
+ }
+
+ if(password !== confirm){
+
+  showError(
+   'changePasswordMsg',
+   'Password baru tidak sepadan.'
+  );
+
+  return;
+ }
+
+ try{
+
+  const r =
+   await call(
+    'changeMyPassword',
+    TOKEN,
+    current,
+    password
+   );
+
+  if(!r){
+
+   throw new Error(
+    'Server tidak mengembalikan response.'
+   );
+
+  }
+
+  if(r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Pertukaran password gagal.'
+   );
+
+  }
+
+  showSuccess(
+   'changePasswordMsg',
+   r.message ||
+   'Password berjaya ditukar.'
+  );
+
+ }catch(e){
+
+  showError(
+   'changePasswordMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ RENDER SHELL
+====================================================== */
+
+function renderShell(){
+
+ if(!STATE || !STATE.user){
+
+  showLogin();
+
+  return;
+ }
+
+ document
+  .getElementById('login')
+  .classList.add(
+   'hidden'
+  );
+
+ document
+  .getElementById('app')
+  .classList.remove(
+   'hidden'
+  );
+
+ document
+  .getElementById('who')
+  .textContent =
+   STATE.user.EMAIL +
+   ' • ' +
+   STATE.user.ROLE;
+
+ const role =
+  STATE.user.ROLE;
+
+ const nav =
+  document.getElementById(
+   'nav'
+  );
+
+ let html = `
+
+  <button onclick="show('dashboard')">
+   🏠 Dashboard
+  </button>
+
+  <button onclick="show('profile')">
+   👤 Keahlian Saya
+  </button>
+
+  <button onclick="show('payments')">
+   💳 Bayaran
+  </button>
+
+  <button onclick="show('receipts')">
+   🧾 Resit
+  </button>
+
+ `;
+
+ if([
+  'SUPER_ADMIN',
+  'ADMIN',
+  'BENDAHARI',
+  'AUDITOR'
+ ].includes(role)){
+
+  html += `
+
+   <hr>
+
+   <button onclick="show('members')">
+    👥 Ahli
+   </button>
+
+   <button onclick="show('allpayments')">
+    💰 Transaksi
+   </button>
+
+   <button onclick="show('audit')">
+    📊 Audit Tahunan
+   </button>
+
+  `;
+
+ }
+
+ if(
+  role === 'SUPER_ADMIN'
+ ){
+
+  html += `
+
+   <hr>
+
+   <button onclick="show('users')">
+    🔐 User & Role
+   </button>
+
+   <button onclick="show('auditlog')">
+    📝 Audit Log
+   </button>
+
+   <button onclick="show('health')">
+    🩺 Database Health
+   </button>
+
+  `;
+
+ }
+
+ nav.innerHTML =
+  html;
+
+}
+
+
+/* =====================================================
+ ROUTER
+====================================================== */
+
+async function show(page){
+
+ CURRENT_PAGE =
+  page;
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ if(!STATE || !STATE.user){
+
+  showLogin();
+
+  return;
+ }
+
+ try{
+
+  if(page === 'dashboard'){
+
+   c.innerHTML =
+    dashboard();
+
+  }
+
+  else if(page === 'profile'){
+
+   await profile();
+
+  }
+
+  else if(page === 'payments'){
+
+   await payments();
+
+  }
+
+  else if(page === 'receipts'){
+
+   await receipts();
+
+  }
+
+  else if(page === 'members'){
+
+   await members();
+
+  }
+
+  else if(page === 'allpayments'){
+
+   await allPayments();
+
+  }
+
+  else if(page === 'audit'){
+
+   await audit();
+
+  }
+
+  else if(page === 'users'){
+
+   await users();
+
+  }
+
+  else if(page === 'auditlog'){
+
+   await auditLog();
+
+  }
+
+  else if(page === 'health'){
+
+   await health();
+
+  }
+
+ }catch(e){
+
+  console.error(
+   'PAGE ERROR:',
+   e
+  );
+
+  c.innerHTML =
+   '<div class="alert">' +
+   esc(
+    e.message ||
+    'Gagal memuatkan halaman.'
+   ) +
+   '</div>';
+
+ }
+
+}
+
+
+/* =====================================================
+ DASHBOARD
+====================================================== */
+
+function dashboard(){
+
+ const s =
+  STATE.summary ||
+  {
+   paymentCount:0,
+   paidTotal:0
+  };
+
+ const p =
+  STATE.profile ||
+  {};
+
+ return `
+
+  <h2>Dashboard</h2>
+
+  <p class="muted">
+   Selamat datang ke portal PPPS19.
+  </p>
+
+  <div class="grid">
+
+   <div class="card">
+    Peranan
+    <div class="metric">
+     ${esc(
+      STATE.user.ROLE
+     )}
+    </div>
+   </div>
+
+   <div class="card">
+    Status
+    <div class="metric">
+     ${esc(
+      p.MEMBER_STATUS ||
+      '-'
+     )}
+    </div>
+   </div>
+
+   <div class="card">
+    Transaksi
+    <div class="metric">
+     ${esc(
+      s.paymentCount
+     )}
+    </div>
+   </div>
+
+   <div class="card">
+    Jumlah Dibayar
+    <div class="metric">
+     ${money(
+      s.paidTotal
+     )}
+    </div>
+   </div>
+
+  </div>
+
+  <div
+   class="card"
+   style="margin-top:14px"
+  >
+
+   <h3>Profil</h3>
+
+   ${profileSummary()}
+
+  </div>
+
+ `;
+
+}
+
+
+function profileSummary(){
+
+ const p =
+  STATE.profile ||
+  {};
+
+ return `
+
+  <b>
+   ${esc(p.NAME || '-')}
+  </b>
+  <br>
+
+  ${esc(p.EMAIL || '-')}
+  <br>
+
+  ${esc(p.ADDRESS || '-')}
+  <br>
+
+  ${esc(p.PHONE || '-')}
+
+ `;
+
+}
+
+
+/* =====================================================
+ PROFILE
+====================================================== */
+
+async function profile(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Memuatkan profil...'
+  );
+
+ const p =
+  await call(
+   'getMyProfile',
+   TOKEN
+  );
+
+ if(!p){
+
+  throw new Error(
+   'Profil tidak diterima daripada server.'
+  );
+
+ }
+
+ STATE.profile =
+  p;
+
+ c.innerHTML = `
+
+  <div class="toolbar">
+
+   <h2>
+    Keahlian Saya
+   </h2>
+
+   <button
+    class="btn"
+    onclick="editProfile()"
+   >
+    Kemaskini
+   </button>
+
+  </div>
+
+  <div class="card">
+
+   <div class="form-grid">
+
+    <div>
+     <label>ID Ahli</label>
+     <input
+      value="${esc(p.MEMBER_ID)}"
+      disabled
+     >
+    </div>
+
+    <div>
+     <label>Status</label>
+     <input
+      value="${esc(p.MEMBER_STATUS)}"
+      disabled
+     >
+    </div>
+
+    <div>
+     <label>Nama</label>
+     <input
+      value="${esc(p.NAME)}"
+      disabled
+     >
+    </div>
+
+    <div>
+     <label>Email</label>
+     <input
+      value="${esc(p.EMAIL)}"
+      disabled
+     >
+    </div>
+
+    <div>
+     <label>Jenis Keahlian</label>
+     <input
+      value="${esc(p.MEMBERSHIP_TYPE)}"
+      disabled
+     >
+    </div>
+
+    <div>
+     <label>No Telefon</label>
+     <input
+      value="${esc(p.PHONE)}"
+      disabled
+     >
+    </div>
+
+    <div class="full">
+
+     <label>Alamat</label>
+
+     <textarea disabled>${esc(
+      p.ADDRESS
+     )}</textarea>
+
+    </div>
+
+   </div>
+
+  </div>
+
+ `;
+
+}
+
+
+function editProfile(){
+
+ const p =
+  STATE.profile ||
+  {};
+
+ openModal(`
+
+  <h3>
+   Kemaskini Profil
+  </h3>
+
+  <div id="profileMsg"></div>
+
+  <div class="form-grid">
+
+   <div class="full">
+
+    <label>Email</label>
+
+    <input
+     id="mEmail"
+     value="${esc(p.EMAIL)}"
+    >
+
+   </div>
+
+   <div>
+
+    <label>No Telefon</label>
+
+    <input
+     id="mPhone"
+     value="${esc(p.PHONE)}"
+    >
+
+   </div>
+
+   <div class="full">
+
+    <label>Alamat</label>
+
+    <textarea
+     id="mAddress"
+    >${esc(p.ADDRESS)}</textarea>
+
+   </div>
+
+  </div>
+
+  <div class="actions">
+
+   <button
+    class="btn secondary"
+    onclick="closeModal()"
+   >
+    Batal
+   </button>
+
+   <button
+    class="btn"
+    onclick="saveProfile()"
+   >
+    Simpan
+   </button>
+
+  </div>
+
+ `);
+
+}
+
+
+async function saveProfile(){
+
+ try{
+
+  const r =
+   await call(
+    'updateMyProfile',
+    TOKEN,
+    {
+     EMAIL:
+      document.getElementById(
+       'mEmail'
+      ).value.trim(),
+
+     PHONE:
+      document.getElementById(
+       'mPhone'
+      ).value.trim(),
+
+     ADDRESS:
+      document.getElementById(
+       'mAddress'
+      ).value
+    }
+   );
+
+  if(r && r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Kemaskini gagal.'
+   );
+
+  }
+
+  closeModal();
+
+  await profile();
+
+ }catch(e){
+
+  showError(
+   'profileMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ PAYMENTS
+====================================================== */
+
+async function payments(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Memuatkan bayaran...'
+  );
+
+ const ps =
+  await call(
+   'listPayments',
+   TOKEN
+  );
+
+ c.innerHTML = `
+
+  <h2>
+   Bayaran
+  </h2>
+
+  ${paymentTable(
+   Array.isArray(ps)
+    ? ps
+    : []
+  )}
+
+ `;
+
+}
+
+
+function paymentTable(ps){
+
+ return `
+
+  <div class="table-wrap">
+
+   <table>
+
+    <tr>
+     <th>Tahun</th>
+     <th>Jenis</th>
+     <th>Amaun</th>
+     <th>Tarikh</th>
+     <th>Status</th>
+     <th>Resit</th>
+    </tr>
+
+    ${
+     ps.length
+      ? ps.map(function(p){
+
+       return `
+
+        <tr>
+
+         <td>
+          ${esc(p.YEAR)}
+         </td>
+
+         <td>
+          ${esc(p.PAYMENT_TYPE)}
+         </td>
+
+         <td>
+          ${money(p.AMOUNT)}
+         </td>
+
+         <td>
+          ${esc(p.PAYMENT_DATE)}
+         </td>
+
+         <td>
+
+          <span
+           class="badge ${
+            p.STATUS === 'PAID'
+             ? 'ok'
+             : ''
+           }"
+          >
+           ${esc(p.STATUS)}
+          </span>
+
+         </td>
+
+         <td>
+          ${p.RECEIPT_ID
+           ? esc(p.RECEIPT_ID)
+           : '-'}
+         </td>
+
+        </tr>
+
+       `;
+
+      }).join('')
+      :
+      `
+       <tr>
+        <td colspan="6">
+         Tiada rekod bayaran.
+        </td>
+       </tr>
+      `
+    }
+
+   </table>
+
+  </div>
+
+ `;
+
+}
+
+
+/* =====================================================
+ RECEIPTS
+====================================================== */
+
+async function receipts(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Memuatkan resit...'
+  );
+
+ const rs =
+  await call(
+   'listReceipts',
+   TOKEN
+  );
+
+ const rows =
+  Array.isArray(rs)
+   ? rs
+   : [];
+
+ c.innerHTML = `
+
+  <h2>
+   Resit
+  </h2>
+
+  <div class="table-wrap">
+
+   <table>
+
+    <tr>
+     <th>No. Resit</th>
+     <th>Tarikh</th>
+     <th>Amaun</th>
+     <th>Dokumen</th>
+    </tr>
+
+    ${
+     rows.length
+      ? rows.map(function(r){
+
+       return `
+
+        <tr>
+
+         <td>
+          ${esc(r.RECEIPT_NO)}
+         </td>
+
+         <td>
+          ${esc(r.ISSUED_AT)}
+         </td>
+
+         <td>
+          ${money(r.AMOUNT)}
+         </td>
+
+         <td>
+
+          ${
+           r.DRIVE_URL
+            ? `<a
+                href="${esc(r.DRIVE_URL)}"
+                target="_blank"
+                rel="noopener"
+               >
+               Buka PDF
+               </a>`
+            : '-'
+          }
+
+         </td>
+
+        </tr>
+
+       `;
+
+      }).join('')
+      :
+      `
+       <tr>
+        <td colspan="4">
+         Tiada resit.
+        </td>
+       </tr>
+      `
+    }
+
+   </table>
+
+  </div>
+
+ `;
+
+}
+
+
+/* =====================================================
+ MEMBERS
+====================================================== */
+
+async function members(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Memuatkan ahli...'
+  );
+
+ const ms =
+  await call(
+   'listMembers',
+   TOKEN
+  );
+
+ const rows =
+  Array.isArray(ms)
+   ? ms
+   : [];
+
+ const canEdit =
+  [
+   'SUPER_ADMIN',
+   'ADMIN'
+  ].includes(
+   STATE.user.ROLE
+  );
+
+ c.innerHTML = `
+
+  <div class="toolbar">
+
+   <h2>
+    Pengurusan Ahli
+   </h2>
+
+   ${
+    canEdit
+     ? `<button
+         class="btn"
+         onclick="memberForm()"
+        >
+        + Ahli
+        </button>`
+     : ''
+   }
+
+  </div>
+
+  <div class="table-wrap">
+
+   <table>
+
+    <tr>
+     <th>ID</th>
+     <th>Nama</th>
+     <th>Email</th>
+     <th>Jenis</th>
+     <th>Status</th>
+     <th></th>
+    </tr>
+
+    ${
+     rows.length
+      ? rows.map(function(m){
+
+       return `
+
+        <tr>
+
+         <td>
+          ${esc(m.MEMBER_ID)}
+         </td>
+
+         <td>
+          ${esc(m.NAME)}
+         </td>
+
+         <td>
+          ${esc(m.EMAIL)}
+         </td>
+
+         <td>
+          ${esc(m.MEMBERSHIP_TYPE)}
+         </td>
+
+         <td>
+          ${esc(m.MEMBER_STATUS)}
+         </td>
+
+         <td>
+
+          ${
+           canEdit
+            ? `<button
+                class="btn secondary"
+                onclick='memberForm(
+                 ${JSON.stringify(m)}
+                )'
+               >
+               Edit
+               </button>`
+            : ''
+          }
+
+         </td>
+
+        </tr>
+
+       `;
+
+      }).join('')
+      :
+      `
+       <tr>
+        <td colspan="6">
+         Tiada ahli.
+        </td>
+       </tr>
+      `
+    }
+
+   </table>
+
+  </div>
+
+ `;
+
+}
+
+
+function memberForm(
+ m={}
+){
+
+ openModal(`
+
+  <h3>
+   ${m.MEMBER_ID
+    ? 'Kemaskini'
+    : 'Tambah'}
+   Ahli
+  </h3>
+
+  <div id="memberMsg"></div>
+
+  <div class="form-grid">
+
+   <div>
+
+    <label>Nama</label>
+
+    <input
+     id="fName"
+     value="${esc(m.NAME)}"
+    >
+
+   </div>
+
+   <div>
+
+    <label>Email</label>
+
+    <input
+     id="fEmail"
+     type="email"
+     value="${esc(m.EMAIL)}"
+    >
+
+   </div>
+
+   <div>
+
+    <label>Jenis</label>
+
+    <select id="fType">
+
+     <option
+      ${m.MEMBERSHIP_TYPE ===
+       'Ahli biasa'
+       ? 'selected'
+       : ''}
+     >
+      Ahli biasa
+     </option>
+
+     <option
+      ${m.MEMBERSHIP_TYPE ===
+       'Ahli bersekutu'
+       ? 'selected'
+       : ''}
+     >
+      Ahli bersekutu
+     </option>
+
+    </select>
+
+   </div>
+
+   <div>
+
+    <label>Telefon</label>
+
+    <input
+     id="fPhone"
+     value="${esc(m.PHONE)}"
+    >
+
+   </div>
+
+   <div class="full">
+
+    <label>Alamat</label>
+
+    <textarea id="fAddress">${esc(
+     m.ADDRESS
+    )}</textarea>
+
+   </div>
+
+   <div>
+
+    <label>No. IC</label>
+
+    <input
+     id="fIc"
+     value="${esc(m.IC_NO)}"
+    >
+
+   </div>
+
+   <div>
+
+    <label>Status</label>
+
+    <select id="fStatus">
+
+     ${[
+      'ACTIVE',
+      'INACTIVE',
+      'SUSPENDED',
+      'ARCHIVED'
+     ].map(function(x){
+
+      return `
+       <option
+        ${m.MEMBER_STATUS === x
+         ? 'selected'
+         : ''}
+       >
+        ${x}
+       </option>
+      `;
+
+     }).join('')}
+
+    </select>
+
+   </div>
+
+  </div>
+
+  <div class="actions">
+
+   <button
+    class="btn secondary"
+    onclick="closeModal()"
+   >
+    Batal
+   </button>
+
+   <button
+    class="btn"
+    onclick="saveMember('${esc(
+     m.MEMBER_ID || ''
+    )}')"
+   >
+    Simpan
+   </button>
+
+  </div>
+
+ `);
+
+}
+
+
+async function saveMember(id){
+
+ try{
+
+  const r =
+   await call(
+    'saveMember',
+    TOKEN,
+    {
+     MEMBER_ID:
+      id,
+
+     NAME:
+      document.getElementById(
+       'fName'
+      ).value.trim(),
+
+     EMAIL:
+      document.getElementById(
+       'fEmail'
+      ).value.trim(),
+
+     MEMBERSHIP_TYPE:
+      document.getElementById(
+       'fType'
+      ).value,
+
+     PHONE:
+      document.getElementById(
+       'fPhone'
+      ).value.trim(),
+
+     ADDRESS:
+      document.getElementById(
+       'fAddress'
+      ).value,
+
+     IC_NO:
+      document.getElementById(
+       'fIc'
+      ).value.trim(),
+
+     MEMBER_STATUS:
+      document.getElementById(
+       'fStatus'
+      ).value
+    }
+   );
+
+  if(r && r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Simpan ahli gagal.'
+   );
+
+  }
+
+  closeModal();
+
+  await members();
+
+ }catch(e){
+
+  showError(
+   'memberMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ ALL PAYMENTS
+====================================================== */
+
+async function allPayments(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Memuatkan transaksi...'
+  );
+
+ const ps =
+  await call(
+   'listPayments',
+   TOKEN
+  );
+
+ const rows =
+  Array.isArray(ps)
+   ? ps
+   : [];
+
+ const canRecord =
+  [
+   'SUPER_ADMIN',
+   'ADMIN',
+   'BENDAHARI'
+  ].includes(
+   STATE.user.ROLE
+  );
+
+ c.innerHTML = `
+
+  <div class="toolbar">
+
+   <h2>
+    Transaksi
+   </h2>
+
+   ${
+    canRecord
+     ? `<button
+         class="btn"
+         onclick="paymentForm()"
+        >
+        + Bayaran
+        </button>`
+     : ''
+   }
+
+  </div>
+
+  ${paymentTableAdmin(rows)}
+
+ `;
+
+}
+
+
+function paymentTableAdmin(
+ ps
+){
+
+ return `
+
+  <div class="table-wrap">
+
+   <table>
+
+    <tr>
+     <th>ID</th>
+     <th>Ahli</th>
+     <th>Tahun</th>
+     <th>Jenis</th>
+     <th>Amaun</th>
+     <th>Status</th>
+     <th>Resit</th>
+    </tr>
+
+    ${
+     ps.length
+      ? ps.map(function(p){
+
+       return `
+
+        <tr>
+
+         <td>
+          ${esc(p.PAYMENT_ID)}
+         </td>
+
+         <td>
+          ${esc(p.MEMBER_ID)}
+         </td>
+
+         <td>
+          ${esc(p.YEAR)}
+         </td>
+
+         <td>
+          ${esc(p.PAYMENT_TYPE)}
+         </td>
+
+         <td>
+          ${money(p.AMOUNT)}
+         </td>
+
+         <td>
+          ${esc(p.STATUS)}
+         </td>
+
+         <td>
+          ${esc(
+           p.RECEIPT_ID ||
+           '-'
+          )}
+         </td>
+
+        </tr>
+
+       `;
+
+      }).join('')
+      :
+      `
+       <tr>
+        <td colspan="7">
+         Tiada transaksi.
+        </td>
+       </tr>
+      `
+    }
+
+   </table>
+
+  </div>
+
+ `;
+
+}
+
+
+/* =====================================================
+ PAYMENT FORM
+====================================================== */
+
+async function paymentForm(){
+
+ try{
+
+  const ms =
+   await call(
+    'listMembers',
+    TOKEN
+   );
+
+  const rows =
+   Array.isArray(ms)
+    ? ms
+    : [];
+
+  openModal(`
+
+   <h3>
+    Rekod Bayaran
+   </h3>
+
+   <div id="paymentMsg"></div>
+
+   <div class="form-grid">
+
+    <div class="full">
+
+     <label>Ahli</label>
+
+     <select id="pMember">
+
+      ${rows
+       .filter(function(m){
+        return m.MEMBER_STATUS ===
+         'ACTIVE';
+       })
+       .map(function(m){
+
+        return `
+         <option
+          value="${esc(m.MEMBER_ID)}"
+         >
+          ${esc(m.MEMBER_ID)}
+          -
+          ${esc(m.NAME)}
+         </option>
+        `;
+
+       }).join('')}
+
+     </select>
+
+    </div>
+
+    <div>
+
+     <label>Tahun</label>
+
+     <input
+      id="pYear"
+      value="${new Date()
+       .getFullYear()}"
+     >
+
+    </div>
+
+    <div>
+
+     <label>Jenis</label>
+
+     <select id="pType">
+
+      <option>
+       REGISTRATION
+      </option>
+
+      <option>
+       ANNUAL
+      </option>
+
+      <option>
+       OTHER
+      </option>
+
+     </select>
+
+    </div>
+
+    <div>
+
+     <label>Amaun</label>
+
+     <input
+      id="pAmount"
+      type="number"
+      step="0.01"
+      min="0"
+     >
+
+    </div>
+
+    <div>
+
+     <label>Kaedah</label>
+
+     <select id="pMethod">
+
+      <option>BANK</option>
+      <option>CASH</option>
+      <option>ONLINE</option>
+      <option>OTHER</option>
+
+     </select>
+
+    </div>
+
+    <div>
+
+     <label>Tarikh</label>
+
+     <input
+      id="pDate"
+      type="date"
+      value="${new Date()
+       .toISOString()
+       .slice(0,10)}"
+     >
+
+    </div>
+
+    <div>
+
+     <label>Rujukan</label>
+
+     <input
+      id="pRef"
+     >
+
+    </div>
+
+   </div>
+
+   <div class="actions">
+
+    <button
+     class="btn secondary"
+     onclick="closeModal()"
+    >
+     Batal
+    </button>
+
+    <button
+     class="btn"
+     onclick="savePayment()"
+    >
+     Simpan
+    </button>
+
+   </div>
+
+  `);
+
+ }catch(e){
+
+  alert(
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+async function savePayment(){
+
+ try{
+
+  const r =
+   await call(
+    'recordPayment',
+    TOKEN,
+    {
+     MEMBER_ID:
+      document.getElementById(
+       'pMember'
+      ).value,
+
+     YEAR:
+      document.getElementById(
+       'pYear'
+      ).value,
+
+     PAYMENT_TYPE:
+      document.getElementById(
+       'pType'
+      ).value,
+
+     AMOUNT:
+      document.getElementById(
+       'pAmount'
+      ).value,
+
+     METHOD:
+      document.getElementById(
+       'pMethod'
+      ).value,
+
+     PAYMENT_DATE:
+      document.getElementById(
+       'pDate'
+      ).value,
+
+     REFERENCE_NO:
+      document.getElementById(
+       'pRef'
+      ).value,
+
+     STATUS:
+      'PAID'
+    }
+   );
+
+  if(r && r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Bayaran gagal direkod.'
+   );
+
+  }
+
+  closeModal();
+
+  await allPayments();
+
+  alert(
+   r && r.receipt
+    ? 'Bayaran direkod dan resit PDF dijana.'
+    : 'Bayaran berjaya direkod.'
+  );
+
+ }catch(e){
+
+  showError(
+   'paymentMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ AUDIT
+====================================================== */
+
+async function audit(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Menjana audit...'
+  );
+
+ const year =
+  new Date()
+   .getFullYear();
+
+ const a =
+  await call(
+   'getAnnualAudit',
+   TOKEN,
+   year
+  );
+
+ if(!a){
+
+  throw new Error(
+   'Data audit tidak diterima.'
+  );
+
+ }
+
+ const members =
+  a.members ||
+  {};
+
+ const payments =
+  a.payments ||
+  {};
+
+ const categories =
+  members.categories ||
+  {};
+
+ c.innerHTML = `
+
+  <div class="toolbar">
+
+   <div>
+
+    <h2>
+     Audit Tahunan ${esc(a.year)}
+    </h2>
+
+    <p class="muted">
+     Ringkasan keahlian, kategori ahli,
+     jumlah rumah dan kutipan bagi tahun
+     ${esc(a.year)}.
+    </p>
+
+   </div>
+
+  </div>
+
+
+  <!-- =================================================
+       SUMMARY
+  ================================================== -->
+
+  <div class="grid">
+
+   <div class="card">
+
+    Jumlah Ahli
+
+    <div class="metric">
+     ${esc(
+      members.total || 0
+     )}
+    </div>
+
+   </div>
+
+
+   <div class="card">
+
+    Ahli Aktif
+
+    <div class="metric">
+     ${esc(
+      members.active || 0
+     )}
+    </div>
+
+   </div>
+
+
+   <div class="card">
+
+    Jumlah Rumah
+
+    <div class="metric">
+     ${esc(
+      members.houses || 0
+     )}
+    </div>
+
+    <div class="muted">
+     Alamat unik
+    </div>
+
+   </div>
+
+
+   <div class="card">
+
+    Jumlah Kutipan
+
+    <div class="metric">
+     ${money(
+      payments.total || 0
+     )}
+    </div>
+
+   </div>
+
+  </div>
+
+
+  <!-- =================================================
+       KATEGORI AHLI
+  ================================================== -->
+
+  <div
+   class="card"
+   style="margin-top:14px"
+  >
+
+   <h3>
+    Kategori Ahli
+   </h3>
+
+   <div class="table-wrap">
+
+    <table>
+
+     <tr>
+
+      <th>
+       Kategori Ahli
+      </th>
+
+      <th>
+       Jumlah Ahli
+      </th>
+
+      <th>
+       Jumlah Rumah
+      </th>
+
+     </tr>
+
+     ${
+      Object.keys(categories).length
+
+       ? Object.entries(
+          categories
+         ).map(function([
+          type,
+          data
+         ]){
+
+          return `
+
+           <tr>
+
+            <td>
+             <b>
+              ${esc(type)}
+             </b>
+            </td>
+
+            <td>
+             ${esc(
+              data.members || 0
+             )}
+            </td>
+
+            <td>
+             ${esc(
+              data.houses || 0
+             )}
+            </td>
+
+           </tr>
+
+          `;
+
+         }).join('')
+
+       :
+
+       `
+
+        <tr>
+
+         <td colspan="3">
+          Tiada kategori ahli.
+         </td>
+
+        </tr>
+
+       `
+     }
+
+
+     <!-- TOTAL -->
+
+     <tr>
+
+      <th>
+       JUMLAH
+      </th>
+
+      <th>
+       ${esc(
+        members.total || 0
+       )}
+      </th>
+
+      <th>
+       ${esc(
+        members.houses || 0
+       )}
+      </th>
+
+     </tr>
+
+    </table>
+
+   </div>
+
+  </div>
+
+
+  <!-- =================================================
+       KUTIPAN MENGIKUT JENIS
+  ================================================== -->
+
+  <div
+   class="card"
+   style="margin-top:14px"
+  >
+
+   <h3>
+    Kutipan Mengikut Jenis
+   </h3>
+
+   <div class="table-wrap">
+
+    <table>
+
+     <tr>
+
+      <th>
+       Jenis Bayaran
+      </th>
+
+      <th>
+       Jumlah
+      </th>
+
+     </tr>
+
+     ${
+      Object.keys(
+       payments.byType || {}
+      ).length
+
+       ? Object.entries(
+          payments.byType || {}
+         ).map(function([
+          type,
+          value
+         ]){
+
+          return `
+
+           <tr>
+
+            <td>
+             ${esc(type)}
+            </td>
+
+            <td>
+             <b>
+              ${money(value)}
+             </b>
+            </td>
+
+           </tr>
+
+          `;
+
+         }).join('')
+
+       :
+
+       `
+
+        <tr>
+
+         <td colspan="2">
+          Tiada kutipan.
+         </td>
+
+        </tr>
+
+       `
+     }
+
+    </table>
+
+   </div>
+
+  </div>
+
+ `;
+
+}
+
+
+/* =====================================================
+ USERS
+====================================================== */
+
+async function users(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Memuatkan user...'
+  );
+
+ const us =
+  await call(
+   'listUsers',
+   TOKEN
+  );
+
+ const rows =
+  Array.isArray(us)
+   ? us
+   : [];
+
+ c.innerHTML = `
+
+  <div class="toolbar">
+
+   <h2>
+    User & Role
+   </h2>
+
+   <button
+    class="btn"
+    onclick="userForm()"
+   >
+    + User
+   </button>
+
+  </div>
+
+  <div class="table-wrap">
+
+   <table>
+
+    <tr>
+
+     <th>Email</th>
+     <th>Member</th>
+     <th>Role</th>
+     <th>Status</th>
+     <th>Aksi</th>
+
+    </tr>
+
+    ${
+     rows.length
+      ? rows.map(function(u){
+
+       return `
+
+        <tr>
+
+         <td>
+          ${esc(u.EMAIL)}
+         </td>
+
+         <td>
+          ${esc(u.MEMBER_ID)}
+         </td>
+
+         <td>
+
+          <select
+           onchange="changeRole(
+            '${esc(u.USER_ID)}',
+            this.value
+           )"
+          >
+
+           ${[
+            'SUPER_ADMIN',
+            'ADMIN',
+            'BENDAHARI',
+            'AUDITOR',
+            'AHLI'
+           ].map(function(r){
+
+            return `
+             <option
+              ${u.ROLE === r
+               ? 'selected'
+               : ''}
+             >
+              ${r}
+             </option>
+            `;
+
+           }).join('')}
+
+          </select>
+
+         </td>
+
+         <td>
+
+          <span class="badge ${
+           u.STATUS === 'ACTIVE'
+            ? 'ok'
+            : 'danger'
+          }">
+
+           ${esc(u.STATUS)}
+
+          </span>
+
+         </td>
+
+         <td>
+
+          <button
+           class="btn secondary"
+           onclick="toggleUser(
+            '${esc(u.USER_ID)}',
+            '${u.STATUS === 'ACTIVE'
+             ? 'INACTIVE'
+             : 'ACTIVE'}'
+           )"
+          >
+           ${
+            u.STATUS === 'ACTIVE'
+             ? 'Nyahaktif'
+             : 'Aktifkan'
+           }
+          </button>
+
+          <button
+           class="btn warning"
+           onclick="adminResetPassword(
+            '${esc(u.USER_ID)}',
+            '${esc(u.EMAIL)}'
+           )"
+          >
+           Reset Password
+          </button>
+
+         </td>
+
+        </tr>
+
+       `;
+
+      }).join('')
+      :
+      `
+       <tr>
+        <td colspan="5">
+         Tiada user.
+        </td>
+       </tr>
+      `
+    }
+
+   </table>
+
+  </div>
+
+ `;
+
+}
+
+
+async function changeRole(
+ id,
+ role
+){
+
+ try{
+
+  const r =
+   await call(
+    'setUserRole',
+    TOKEN,
+    id,
+    role
+   );
+
+  if(r && r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Gagal menukar role.'
+   );
+
+  }
+
+  await users();
+
+ }catch(e){
+
+  alert(
+   e.message ||
+   e
+  );
+
+  await users();
+
+ }
+
+}
+
+
+async function toggleUser(
+ id,
+ status
+){
+
+ try{
+
+  const r =
+   await call(
+    'setUserStatus',
+    TOKEN,
+    id,
+    status
+   );
+
+  if(r && r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Gagal mengubah status user.'
+   );
+
+  }
+
+  await users();
+
+ }catch(e){
+
+  alert(
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ ADMIN RESET USER PASSWORD
+====================================================== */
+
+function adminResetPassword(
+ userId,
+ email
+){
+
+ openModal(`
+
+  <h3>
+   Reset Password User
+  </h3>
+
+  <p class="muted">
+   ${esc(email)}
+  </p>
+
+  <div id="adminResetMsg"></div>
+
+  <label>Password Baru</label>
+
+  <input
+   id="adminNewPassword"
+   type="password"
+   minlength="8"
+  >
+
+  <label>Sahkan Password</label>
+
+  <input
+   id="adminConfirmPassword"
+   type="password"
+   minlength="8"
+  >
+
+  <div class="actions">
+
+   <button
+    class="btn secondary"
+    onclick="closeModal()"
+   >
+    Batal
+   </button>
+
+   <button
+    class="btn"
+    onclick="saveAdminReset(
+     '${esc(userId)}'
+    )"
+   >
+    Reset
+   </button>
+
+  </div>
+
+ `);
+
+}
+
+
+async function saveAdminReset(
+ userId
+){
+
+ const password =
+  document.getElementById(
+   'adminNewPassword'
+  ).value;
+
+ const confirm =
+  document.getElementById(
+   'adminConfirmPassword'
+  ).value;
+
+ if(password.length < 8){
+
+  showError(
+   'adminResetMsg',
+   'Password mestilah sekurang-kurangnya 8 aksara.'
+  );
+
+  return;
+ }
+
+ if(password !== confirm){
+
+  showError(
+   'adminResetMsg',
+   'Password tidak sepadan.'
+  );
+
+  return;
+ }
+
+ try{
+
+  const r =
+   await call(
+    'resetUserPassword',
+    TOKEN,
+    userId,
+    password
+   );
+
+  if(!r){
+
+   throw new Error(
+    'Server tidak mengembalikan response.'
+   );
+
+  }
+
+  if(r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Reset password gagal.'
+   );
+
+  }
+
+  showSuccess(
+   'adminResetMsg',
+   r.message ||
+   'Password berjaya direset.'
+  );
+
+ }catch(e){
+
+  showError(
+   'adminResetMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ CREATE USER
+====================================================== */
+
+async function userForm(){
+
+ try{
+
+  const ms =
+   await call(
+    'listMembers',
+    TOKEN
+   );
+
+  const rows =
+   Array.isArray(ms)
+    ? ms
+    : [];
+
+  openModal(`
+
+   <h3>
+    Cipta User
+   </h3>
+
+   <div id="userMsg"></div>
+
+   <div class="form-grid">
+
+    <div class="full">
+
+     <label>Ahli</label>
+
+     <select id="uMember">
+
+      ${rows.map(function(m){
+
+       return `
+        <option
+         value="${esc(m.MEMBER_ID)}"
+        >
+         ${esc(m.MEMBER_ID)}
+         -
+         ${esc(m.NAME)}
+        </option>
+       `;
+
+      }).join('')}
+
+     </select>
+
+    </div>
+
+    <div>
+
+     <label>Email</label>
+
+     <input
+      id="uEmail"
+      type="email"
+     >
+
+    </div>
+
+    <div>
+
+     <label>Role</label>
+
+     <select id="uRole">
+
+      ${[
+       'AHLI',
+       'ADMIN',
+       'BENDAHARI',
+       'AUDITOR',
+       'SUPER_ADMIN'
+      ].map(function(x){
+
+       return `
+        <option>
+         ${x}
+        </option>
+       `;
+
+      }).join('')}
+
+     </select>
+
+    </div>
+
+    <div class="full">
+
+     <label>Password</label>
+
+     <input
+      id="uPass"
+      type="password"
+      minlength="8"
+     >
+
+    </div>
+
+   </div>
+
+   <div class="actions">
+
+    <button
+     class="btn secondary"
+     onclick="closeModal()"
+    >
+     Batal
+    </button>
+
+    <button
+     class="btn"
+     onclick="saveUser()"
+    >
+     Simpan
+    </button>
+
+   </div>
+
+  `);
+
+ }catch(e){
+
+  alert(
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+async function saveUser(){
+
+ const password =
+  document.getElementById(
+   'uPass'
+  ).value;
+
+ if(password.length < 8){
+
+  showError(
+   'userMsg',
+   'Password mestilah sekurang-kurangnya 8 aksara.'
+  );
+
+  return;
+ }
+
+ try{
+
+  const r =
+   await call(
+    'createOrUpdateUser',
+    TOKEN,
+    {
+     MEMBER_ID:
+      document.getElementById(
+       'uMember'
+      ).value,
+
+     EMAIL:
+      document.getElementById(
+       'uEmail'
+      ).value.trim(),
+
+     ROLE:
+      document.getElementById(
+       'uRole'
+      ).value,
+
+     PASSWORD:
+      password,
+
+     STATUS:
+      'ACTIVE'
+    }
+   );
+
+  if(r && r.ok === false){
+
+   throw new Error(
+    r.message ||
+    'Gagal mencipta user.'
+   );
+
+  }
+
+  closeModal();
+
+  await users();
+
+ }catch(e){
+
+  showError(
+   'userMsg',
+   e.message ||
+   e
+  );
+
+ }
+
+}
+
+
+/* =====================================================
+ AUDIT LOG
+====================================================== */
+
+async function auditLog(){
+
+ const c =
+  document.getElementById(
+   'content'
+  );
+
+ c.innerHTML =
+  loading(
+   'Memuatkan audit log...'
+  );
+
+ const l =
+  await call(
+   'listAuditLog',
+   TOKEN
+  );
+
+ const rows =
+  Array.isArray(l)
+   ? l
+   : [];
+
+ c.innerHTML = `
+
+  <h2>
+   Audit Log
+  </h2>
+
+  <div class="table-wrap">
+
+   <table>
+
+    <tr>
+     <th>Masa</th>
+     <th>User</th>
+     <th>Role</th>
+     <th>Action</th>
+     <th>Entity</th>
+     <th>Details</th>
+    </tr>
+
+    ${
+     rows.length
+      ? rows.map(function(x){
+
+       return `
+
+        <tr>
+
+         <td>
+          ${esc(x.TIMESTAMP)}
+         </td>
+
+         <td>
+          ${esc(x.ACTOR_EMAIL)}
+         </td>
+
+         <td>
+          ${esc(x.ACTOR_ROLE)}
+         </td>
+
+         <td>
+          ${esc(x.ACTION)}
+         </td>
+
+         <td>
+          ${esc(x.ENTITY_TYPE)}
+          ${esc(x.ENTITY_ID)}
+         </td>
+
+         <td>
+          ${esc(x.DETAILS)}
+         </td>
+
+        </tr>
+
+       `;
+
+      }).join('')
+      :
+      `
+       <tr>
+        <td colspan="6">
+         Tiada audit log.
+        </td>
+       </tr>
+      `
+    }
+
+   </table>
+
+  </div>
+
+ `;
+
+}
+
+
+/* =====================================================
+ DATABASE HEALTH
+====================================================== */
+
+async function health(){
+
+ const content =
+  document.getElementById(
+   'content'
+  );
+
+ content.innerHTML =
+  loading(
+   'Memeriksa database...'
+  );
+
+ try{
+
+  const h =
+   await call(
+    'getDatabaseHealth',
+    TOKEN
+   );
+
+  if(!h){
+
+   throw new Error(
+    'Server tidak mengembalikan status database.'
+   );
+
+  }
+
+  content.innerHTML = `
+
+   <h2>
+    Database Health
+   </h2>
+
+   <div class="card">
+
+    <p>
+     Spreadsheet:
+     <b>
+      ${esc(
+       h.spreadsheetName ||
+       '-'
+      )}
+     </b>
+    </p>
+
+    <p>
+     ID:
+     ${esc(
+      h.spreadsheetId ||
+      '-'
+     )}
+    </p>
+
+    <p class="${
+     h.ok
+      ? 'health-ok'
+      : 'health-error'
+    }">
+
+     ${
+      h.ok
+       ? '✓ DATABASE HEALTHY'
+       : '✗ DATABASE ERROR'
+     }
+
+    </p>
+
+   </div>
+
+   <div
+    class="card"
+    style="margin-top:14px"
+   >
+
+    <h3>
+     Sheets
+    </h3>
+
+    ${Object.entries(
+     h.sheets ||
+     {}
+    ).map(function([
+     name,
+     data
+    ]){
+
+     return `
+
+      <p>
+
+       <b>
+        ${esc(name)}
+       </b>
+
+       :
+       ${
+        data &&
+        data.exists
+         ? '✓'
+         : '✗'
+       }
+
+       ${
+        data &&
+        data.exists
+         ? ' (' +
+           esc(data.rows) +
+           ' records)'
+         : ''
+       }
+
+      </p>
+
+     `;
+
+    }).join('')}
+
+   </div>
+
+   ${
+    h.errors &&
+    h.errors.length
+     ? `
+
+       <div class="alert">
+
+        ${h.errors
+         .map(function(e){
+
+          return `
+           <div>
+            ${esc(e)}
+           </div>
+          `;
+
+         }).join('')}
+
+       </div>
+
+      `
+     : ''
+   }
+
+  `;
+
+ }catch(e){
+
+  content.innerHTML = `
+
+   <div class="alert">
+    ${esc(
+     e.message ||
+     e
+    )}
+   </div>
+
+  `;
+
+ }
+
+}
+
+
+/* =====================================================
+ MODAL
+====================================================== */
+
+function openModal(
+ html
+){
+
+ document.getElementById(
+  'modalContent'
+ ).innerHTML =
+  html;
+
+ document.getElementById(
+  'modal'
+ ).classList.remove(
+  'hidden'
+ );
+
+}
+
+
+function closeModal(){
+
+ document.getElementById(
+  'modal'
+ ).classList.add(
+  'hidden'
+ );
+
+}
+
+
+/* =====================================================
+ AUTO SESSION START
+====================================================== */
+
+document.addEventListener(
+ 'DOMContentLoaded',
+ function(){
+
+  if(TOKEN){
+
+   loadPortal();
+
+  }else{
+
+   showLogin();
+
+  }
+
+ }
+);
+
+/* =========================================================
+   MOBILE DRAWER & CROSS-FRAME LISTENERS
+   ========================================================= */
+
+function toggleMobileDrawer() {
+  const drawer = document.getElementById('mobileDrawer');
+  const backdrop = document.getElementById('mobileDrawerBackdrop');
+  const button = document.getElementById('mobileMenuButton');
+
+  if (!drawer) return;
+
+  // Force toggle open class
+  const isOpen = drawer.classList.toggle('mobile-drawer-open');
+
+  if (backdrop) {
+    backdrop.classList.toggle('mobile-drawer-visible', isOpen);
+  }
+
+  if (button) {
+    button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    button.textContent = isOpen ? '✕' : '☰';
+  }
+
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+
+function closeMobileDrawer() {
+  const drawer = document.getElementById('mobileDrawer');
+  const backdrop = document.getElementById('mobileDrawerBackdrop');
+  const button = document.getElementById('mobileMenuButton');
+
+  if (drawer) drawer.classList.remove('mobile-drawer-open');
+  if (backdrop) backdrop.classList.remove('mobile-drawer-visible');
+  if (button) {
+    button.setAttribute('aria-expanded', 'false');
+    button.textContent = '☰';
+  }
+
+  document.body.style.overflow = '';
+}
+
+/* LISTEN TO PARENT FRAME COMMANDS (from index.html) */
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.action === 'toggleDrawer') {
+    toggleMobileDrawer();
+  }
+});
 </script>
 </body>
 </html>
